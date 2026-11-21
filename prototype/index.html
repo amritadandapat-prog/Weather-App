@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Weather Prototype</title>
+<style>
+:root{--r:20px;--glass:rgba(255,255,255,.14);--bd:rgba(255,255,255,.25);--tx:#fff;--mut:rgba(255,255,255,.75)}
+*{box-sizing:border-box;margin:0}
+body{font-family:Inter,system-ui,-apple-system,sans-serif;color:var(--tx);min-height:100vh;
+ background:linear-gradient(160deg,#f2b705,#f7cd3c 45%,#ffe98a);background-attachment:fixed;display:flex}
+body[data-theme=day]{--tx:#2b2100;--mut:rgba(43,33,0,.72);--glass:rgba(255,255,255,.38);--bd:rgba(255,255,255,.6);--rain:#1d5fa8}
+body[data-theme=night]{background:linear-gradient(160deg,#1a1203,#3d2c08 60%,#7a5a12)}
+body[data-theme=rain]{background:linear-gradient(160deg,#4a4328,#6e6538 60%,#9a8f5a)}
+.rail{display:none;width:240px;padding:24px;gap:8px;flex-direction:column}
+.rail h2{font-size:14px;color:var(--mut);font-weight:500;margin-bottom:8px}
+.chip{padding:12px 14px;border-radius:14px;background:var(--glass);border:1px solid var(--bd);cursor:pointer;display:flex;justify-content:space-between}
+main{flex:1;max-width:1200px;margin:0 auto;padding:16px;display:grid;gap:16px;grid-template-columns:repeat(12,1fr);align-content:start}
+.card{background:var(--glass);border:1px solid var(--bd);border-radius:var(--r);padding:16px;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);grid-column:span 12}
+.card h3{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);margin-bottom:12px;font-weight:600}
+.owner{grid-column:span 12;text-align:right;font-size:14px;font-weight:600;letter-spacing:.02em;color:var(--mut)}
+.search{grid-column:span 12;display:flex;gap:8px}
+.search input{flex:1;padding:14px 16px;border-radius:999px;border:1px solid var(--bd);background:var(--glass);color:var(--tx);font-size:16px}
+.search input::placeholder{color:var(--mut)}
+.search button,.tog{padding:0 16px;border-radius:999px;border:1px solid var(--bd);background:var(--glass);color:var(--tx);cursor:pointer;font-size:14px}
+.hero{text-align:center;padding:24px 16px;background:none;border:0;backdrop-filter:none}
+.hero .city{font-size:24px}.hero .temp{font-size:96px;font-weight:200;line-height:1}
+.hero .cond{font-size:20px}.hero .sub{color:var(--mut);margin-top:6px}
+.hourly{display:flex;gap:20px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:4px}
+.h{flex:0 0 auto;text-align:center;scroll-snap-align:start;min-width:48px}
+.h small{display:block;color:var(--mut)}.h .p{color:var(--rain,#9fd3ff);font-size:12px;min-height:16px}
+.day{display:grid;grid-template-columns:56px 28px 1fr;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--bd)}
+.day:first-of-type{border-top:0}
+.bar{display:grid;grid-template-columns:32px 1fr 32px;gap:8px;align-items:center;font-size:14px}
+.track{height:4px;border-radius:4px;background:rgba(255,255,255,.2);position:relative}
+.track i{position:absolute;top:0;bottom:0;border-radius:4px;background:linear-gradient(90deg,#fff3b0,#e67e22)}
+.map{display:grid;place-items:center;min-height:220px;color:var(--mut);text-align:center}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;grid-column:span 12}
+.grid .card{grid-column:auto}.v{font-size:32px;font-weight:300}.n{color:var(--mut);font-size:13px;margin-top:6px}
+@media(min-width:1024px){
+ .rail{display:flex}
+ .hourly-c{grid-column:span 12}.daily-c{grid-column:span 5}.map-c{grid-column:span 7}
+ .grid{grid-template-columns:repeat(4,1fr)}
+}
+@media(prefers-reduced-motion:no-preference){.card{transition:transform .2s}.card:hover{transform:translateY(-2px)}}
+</style>
+</head>
+<body data-theme="day">
+<aside class="rail" aria-label="Saved locations">
+ <h2>Saved locations</h2>
+ <div class="chip"><span>Bengaluru</span><span>26°</span></div>
+ <div class="chip"><span>Mumbai</span><span>31°</span></div>
+ <div class="chip"><span>London</span><span>9°</span></div>
+</aside>
+<main>
+ <header class="owner">Pradeep Gorai</header>
+ <form class="search" role="search" onsubmit="return false">
+  <input type="search" placeholder="Search city" aria-label="Search city">
+  <button class="tog" id="unit" type="button">°C</button>
+  <button class="tog" id="theme" type="button">Theme</button>
+ </form>
+ <section class="card hero" aria-label="Current conditions">
+  <div class="city">Bengaluru</div>
+  <div class="temp" data-c="26">26°</div>
+  <div class="cond">Partly cloudy</div>
+  <div class="sub">H:29° L:20° · Rain expected in 12 min</div>
+ </section>
+ <section class="card hourly-c" aria-label="Hourly forecast"><h3>Hourly</h3>
+  <div class="hourly" id="hourly"></div></section>
+ <section class="card daily-c" aria-label="7-day forecast"><h3>7-day</h3><div id="daily"></div></section>
+ <section class="card map-c map" aria-label="Radar map"><div>Radar map placeholder<br><small>(v1.1, Leaflet + RainViewer)</small></div></section>
+ <div class="grid">
+  <div class="card"><h3>Feels like</h3><div class="v">28°</div><div class="n">Humidity makes it feel warmer.</div></div>
+  <div class="card"><h3>Wind</h3><div class="v">14 km/h</div><div class="n">From the south-west.</div></div>
+  <div class="card"><h3>UV index</h3><div class="v">7</div><div class="n">High. Use sun protection.</div></div>
+  <div class="card"><h3>Humidity</h3><div class="v">68%</div><div class="n">Dew point 19°.</div></div>
+  <div class="card"><h3>Air quality</h3><div class="v">42</div><div class="n">Good.</div></div>
+  <div class="card"><h3>Pressure</h3><div class="v">1012 hPa</div><div class="n">Steady.</div></div>
+  <div class="card"><h3>Visibility</h3><div class="v">9 km</div><div class="n">Clear view.</div></div>
+  <div class="card"><h3>Sunset</h3><div class="v">6:04 pm</div><div class="n">Sunrise 6:21 am.</div></div>
+ </div>
+</main>
+<script>
+const hrs=["Now","1pm","2pm","3pm","4pm","5pm","6pm","7pm","8pm","9pm","10pm","11pm"];
+const t=[26,27,28,28,27,25,23,22,21,21,20,20],p=[0,0,10,30,60,40,20,0,0,0,0,0];
+document.getElementById("hourly").innerHTML=hrs.map((h,i)=>`<div class="h"><small>${h}</small><div class="p">${p[i]?p[i]+"%":""}</div><div>☁️</div><div data-c="${t[i]}">${t[i]}°</div></div>`).join("");
+const d=[["Today",20,29],["Sat",20,28],["Sun",19,27],["Mon",19,26],["Tue",20,28],["Wed",21,30],["Thu",21,31]];
+document.getElementById("daily").innerHTML=d.map(([n,lo,hi])=>`<div class="day"><span>${n}</span><span>⛅</span><div class="bar"><span data-c="${lo}">${lo}°</span><div class="track"><i style="left:${(lo-15)*5}%;right:${100-(hi-15)*5}%"></i></div><span data-c="${hi}">${hi}°</span></div></div>`).join("");
+let f=false;
+document.getElementById("unit").onclick=e=>{f=!f;e.target.textContent=f?"°F":"°C";
+ document.querySelectorAll("[data-c]").forEach(el=>{const c=+el.dataset.c;el.textContent=Math.round(f?c*9/5+32:c)+"°"})};
+const th=["day","night","rain"];let i=0;
+document.getElementById("theme").onclick=()=>document.body.dataset.theme=th[++i%3];
+</script>
+</body>
+</html>
